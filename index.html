@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 Gerador de Redações ENEM 1000 | Professor IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 1s linear infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gradient-bg {
+            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        .prose-custom {
+            line-height: 1.8;
+        }
+        .prose-custom p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+        .prose-custom h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: #5b21b6;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+    <!-- Hero Section -->
+    <div class="gradient-bg min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8 animate-fade-in">
+                <div class="inline-block bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 mb-4">
+                    <span class="text-white font-semibold">🎓 Professor IA Especialista</span>
+                </div>
+                <h1 class="text-5xl sm:text-6xl font-bold text-white mb-4">
+                    Gerador de Redações
+                </h1>
+                <p class="text-xl text-white/90 max-w-2xl mx-auto">
+                    Alcance a nota 1000 com redações personalizadas e análise detalhada das competências ENEM
+                </p>
+            </div>
+
+            <!-- Main Card -->
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+                <!-- Input Section -->
+                <div class="p-6 sm:p-8 border-b border-gray-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">✏️</span>
+                        <h2 class="text-2xl font-bold text-gray-800">Digite o tema da sua redação</h2>
+                    </div>
+                    
+                    <textarea 
+                        id="temaInput" 
+                        rows="4"
+                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 resize-none text-gray-700 placeholder-gray-400"
+                        placeholder="Exemplo: Os desafios da inclusão digital no Brasil pós-pandemia"
+                    ></textarea>
+                    
+                    <!-- Button Group -->
+                    <div class="flex flex-wrap gap-3 mt-4">
+                        <button onclick="gerarRedacao()" class="flex-1 sm:flex-none bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg">
+                            📝 Gerar Redação
+                        </button>
+                        <button onclick="carregarTemasSugeridos()" class="flex-1 sm:flex-none bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg">
+                            💡 Ver Temas Sugeridos
+                        </button>
+                        <button onclick="limparTudo()" class="flex-1 sm:flex-none bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                    
+                    <!-- Temas Sugeridos -->
+                    <div id="temasSugeridos" class="mt-6 hidden">
+                        <div class="bg-green-50 rounded-xl p-4 border-l-4 border-green-500">
+                            <h3 class="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                                <span>📚</span> Temas sugeridos pelo Professor
+                            </h3>
+                            <div id="temasList" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Section -->
+                <div id="loading" class="hidden p-8 text-center bg-gradient-to-r from-purple-50 to-indigo-50">
+                    <div class="inline-block">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                        <p class="text-gray-700 font-semibold">🎯 Professor IA está preparando sua redação nota 1000...</p>
+                        <p class="text-sm text-gray-500 mt-2">Aguarde, estamos buscando a melhor estrutura argumentativa!</p>
+                    </div>
+                </div>
+
+                <!-- Result Section -->
+                <div id="resultado" class="hidden">
+                    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-3">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>📖</span> Sua Redação Nota 1000
+                        </h2>
+                        <button onclick="copiarRedacao()" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 shadow">
+                            📋 Copiar Redação
+                        </button>
+                    </div>
+                    
+                    <div id="redacaoContent" class="p-6 sm:p-8 prose-custom max-w-none"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8 text-white/80 text-sm">
+                <p>© 2024 Gerador de Redações ENEM - Professor IA | Redações únicas e personalizadas</p>
+                <p class="mt-1">💡 Dica: Use Ctrl+Enter para gerar rapidamente sua redação</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URL da sua API (mude se necessário)
+        const API_URL = 'http://localhost:5000';
+        
+        async function gerarRedacao() {
+            const tema = document.getElementById('temaInput').value.trim();
+            
+            if (!tema) {
+                showToast('❌ Por favor, digite um tema para a redação!', 'error');
+                return;
+            }
+            
+            if (tema.length < 10) {
+                showToast('❌ Seja mais específico no tema (mínimo 10 caracteres)', 'error');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('resultado').classList.add('hidden');
+            document.getElementById('temasSugeridos').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${API_URL}/gerar-redacao`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tema: tema })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    exibirRedacao(data.redacao, data.tema_solicitado);
+                    document.getElementById('resultado').classList.remove('hidden');
+                    showToast('✅ Redação gerada com sucesso!', 'success');
+                } else {
+                    mostrarErro(data.message);
+                }
+            } catch (error) {
+                mostrarErro('Erro de conexão: ' + error.message + '. Verifique se o servidor está rodando.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        function exibirRedacao(redacao, tema) {
+            const container = document.getElementById('redacaoContent');
+            
+            let html = `
+                <div class="text-center mb-8">
+                    <div class="inline-block bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 rounded-full text-sm font-semibold mb-3">
+                        🎯 Tema: ${tema}
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-800 mt-2">📌 ${redacao.titulo || 'Título não disponível'}</h2>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-purple-700 flex items-center gap-2 mb-3">
+                        <span>📖</span> Introdução
+                    </h3>
+                    <p class="text-gray-700 leading-relaxed">${redacao.introducao || 'Não disponível'}</p>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-purple-700 flex items-center gap-2 mb-3">
+                        <span>📝</span> Desenvolvimento
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Argumento 1:</h4>
+                            <p class="text-gray-700 leading-relaxed">${redacao.desenvolvimento?.paragrafo_1 || ''}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Argumento 2:</h4>
+                            <p class="text-gray-700 leading-relaxed">${redacao.desenvolvimento?.paragrafo_2 || ''}</p>
+                        </div>
+                        ${redacao.desenvolvimento?.paragrafo_3 ? `
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Argumento 3:</h4>
+                            <p class="text-gray-700 leading-relaxed">${redacao.desenvolvimento.paragrafo_3}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-purple-700 flex items-center gap-2 mb-3">
+                        <span>🎯</span> Conclusão
+                    </h3>
+                    <p class="text-gray-700 leading-relaxed">${redacao.conclusao || 'Não disponível'}</p>
+                </div>
+                
+                <div class="bg-blue-50 rounded-xl p-6 shadow-sm mb-6 border-l-4 border-blue-500">
+                    <h3 class="text-xl font-bold text-blue-800 flex items-center gap-2 mb-3">
+                        <span>📚</span> Referências Bibliográficas
+                    </h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-700">
+                        ${redacao.referencias?.map(ref => `<li>${ref}</li>`).join('') || '<li>Não disponível</li>'}
+                    </ul>
+                </div>
+                
+                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-xl font-bold text-orange-800 flex items-center gap-2 mb-4">
+                        <span>⭐</span> Análise das Competências ENEM (Nota 1000)
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="bg-white rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">1️⃣</span>
+                                <strong class="text-gray-800">Competência 1:</strong>
+                            </div>
+                            <p class="text-gray-700 text-sm">${redacao.analise_criterios_enem?.competencia_1 || 'Não disponível'}</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">2️⃣</span>
+                                <strong class="text-gray-800">Competência 2:</strong>
+                            </div>
+                            <p class="text-gray-700 text-sm">${redacao.analise_criterios_enem?.competencia_2 || 'Não disponível'}</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">3️⃣</span>
+                                <strong class="text-gray-800">Competência 3:</strong>
+                            </div>
+                            <p class="text-gray-700 text-sm">${redacao.analise_criterios_enem?.competencia_3 || 'Não disponível'}</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">4️⃣</span>
+                                <strong class="text-gray-800">Competência 4:</strong>
+                            </div>
+                            <p class="text-gray-700 text-sm">${redacao.analise_criterios_enem?.competencia_4 || 'Não disponível'}</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">5️⃣</span>
+                                <strong class="text-gray-800">Competência 5:</strong>
+                            </div>
+                            <p class="text-gray-700 text-sm">${redacao.analise_criterios_enem?.competencia_5 || 'Não disponível'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Scroll suave para o resultado
+            document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        async function carregarTemasSugeridos() {
+            try {
+                const response = await fetch(`${API_URL}/temas-sugeridos`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const temasDiv = document.getElementById('temasList');
+                    temasDiv.innerHTML = data.temas_sugeridos.map(tema => 
+                        `<button onclick="usarTema('${tema.replace(/'/g, "\\'")}')" 
+                            class="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-full text-sm transition-all duration-200">
+                            ${tema}
+                        </button>`
+                    ).join('');
+                    
+                    document.getElementById('temasSugeridos').classList.remove('hidden');
+                    document.getElementById('temasSugeridos').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar temas:', error);
+                showToast('Erro ao carregar temas sugeridos', 'error');
+            }
+        }
+        
+        function usarTema(tema) {
+            document.getElementById('temaInput').value = tema;
+            document.getElementById('temasSugeridos').classList.add('hidden');
+            document.getElementById('temaInput').focus();
+            showToast('Tema selecionado! Clique em "Gerar Redação"', 'success');
+        }
+        
+        async function copiarRedacao() {
+            const redacaoContent = document.getElementById('redacaoContent');
+            
+            try {
+                // Usa a API Clipboard moderna
+                const texto = redacaoContent.innerText;
+                await navigator.clipboard.writeText(texto);
+                showToast('✅ Redação copiada para a área de transferência!', 'success');
+            } catch (err) {
+                // Fallback para navegadores antigos
+                const range = document.createRange();
+                range.selectNode(redacaoContent);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                showToast('✅ Redação copiada para a área de transferência!', 'success');
+            }
+        }
+        
+        function limparTudo() {
+            document.getElementById('temaInput').value = '';
+            document.getElementById('resultado').classList.add('hidden');
+            document.getElementById('temasSugeridos').classList.add('hidden');
+            document.getElementById('temaInput').focus();
+            showToast('Tudo limpo! Digite um novo tema', 'info');
+        }
+        
+        function mostrarErro(mensagem) {
+            const container = document.getElementById('redacaoContent');
+            container.innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">❌</span>
+                        <h3 class="text-xl font-bold text-red-800">Erro ao gerar redação</h3>
+                    </div>
+                    <p class="text-red-700 mb-4">${mensagem}</p>
+                    <div class="bg-red-100 rounded-lg p-4">
+                        <strong class="text-red-800 block mb-2">💡 Dicas para resolver:</strong>
+                        <ul class="list-disc list-inside text-red-700 space-y-1 text-sm">
+                            <li>Verifique se o tema está claro e específico</li>
+                            <li>Tente usar um tema com pelo menos 10 caracteres</li>
+                            <li>Verifique se o servidor está rodando: <code class="bg-red-200 px-2 py-1 rounded">python app.py</code></li>
+                            <li>Confira se a API key do Gemini está configurada no arquivo .env</li>
+                            <li>Certifique-se que o backend está na porta 5000</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            document.getElementById('resultado').classList.remove('hidden');
+        }
+        
+        function showToast(message, type = 'success') {
+            // Criar toast notification
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            toast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        // Permitir gerar redação com Ctrl+Enter
+        document.getElementById('temaInput').addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                gerarRedacao();
+            }
+        });
+        
+        // Dica de atalho
+        console.log('💡 Dica: Use Ctrl+Enter para gerar redação rapidamente!');
+    </script>
+</body>
+</html>
