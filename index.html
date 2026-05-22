@@ -158,12 +158,31 @@
             <div class="text-center mt-8 text-white/80 text-sm">
                 <p>© 2024 Gerador de Redações ENEM - Professor IA | Redações únicas e personalizadas</p>
                 <p class="mt-1">💡 Dica: Use Ctrl+Enter para gerar rapidamente sua redação</p>
+                <p class="mt-1 text-xs">🚀 Backend hospedado na Vercel | API funcionando</p>
             </div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://projeto-com-ia-backend.vercel.app/gerar-redacao';
+        
+        async function verificarConexao() {
+            try {
+                console.log('🔍 Verificando conexão com:', API_URL);
+                const response = await fetch(`${API_URL}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Conectado ao backend com sucesso!', data);
+                    showToast('✅ Conectado ao servidor! Pronto para gerar redações.', 'success');
+                } else {
+                    console.error('❌ Erro ao conectar ao backend');
+                    showToast('⚠️ Não foi possível conectar ao servidor.', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro de conexão:', error);
+                showToast('❌ Erro de conexão com o servidor.', 'error');
+            }
+        }
         
         async function gerarRedacao() {
             const tema = document.getElementById('temaInput').value.trim();
@@ -178,12 +197,14 @@
                 return;
             }
             
-            // Mostrar loading
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('resultado').classList.add('hidden');
             document.getElementById('temasSugeridos').classList.add('hidden');
             
             try {
+                console.log('📤 Enviando requisição para:', `${API_URL}/gerar-redacao`);
+                console.log('📝 Tema:', tema);
+                
                 const response = await fetch(`${API_URL}/gerar-redacao`, {
                     method: 'POST',
                     headers: {
@@ -192,7 +213,15 @@
                     body: JSON.stringify({ tema: tema })
                 });
                 
+                console.log('📥 Resposta recebida. Status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('✅ Dados recebidos com sucesso!');
                 
                 if (data.status === 'success') {
                     exibirRedacao(data.redacao, data.tema_solicitado);
@@ -202,7 +231,9 @@
                     mostrarErro(data.message);
                 }
             } catch (error) {
-                mostrarErro('Erro de conexão: ' + error.message + '. Verifique se o servidor está rodando.');
+                console.error('❌ Erro detalhado:', error);
+                mostrarErro(error.message);
+                showToast('❌ Erro ao gerar redação. Verifique o console.', 'error');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
@@ -310,7 +341,6 @@
             
             container.innerHTML = html;
             
-            // Scroll suave para o resultado
             document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
@@ -348,12 +378,10 @@
             const redacaoContent = document.getElementById('redacaoContent');
             
             try {
-                // Usa a API Clipboard moderna
                 const texto = redacaoContent.innerText;
                 await navigator.clipboard.writeText(texto);
                 showToast('✅ Redação copiada para a área de transferência!', 'success');
             } catch (err) {
-                // Fallback para navegadores antigos
                 const range = document.createRange();
                 range.selectNode(redacaoContent);
                 window.getSelection().removeAllRanges();
@@ -384,11 +412,10 @@
                     <div class="bg-red-100 rounded-lg p-4">
                         <strong class="text-red-800 block mb-2">💡 Dicas para resolver:</strong>
                         <ul class="list-disc list-inside text-red-700 space-y-1 text-sm">
-                            <li>Verifique se o tema está claro e específico</li>
-                            <li>Tente usar um tema com pelo menos 10 caracteres</li>
-                            <li>Verifique se o servidor está rodando: <code class="bg-red-200 px-2 py-1 rounded">python app.py</code></li>
-                            <li>Confira se a API key do Gemini está configurada no arquivo .env</li>
-                            <li>Certifique-se que o backend está na porta 5000</li>
+                            <li>Verifique se o tema está claro e específico (mínimo 10 caracteres)</li>
+                            <li>Tente usar um tema diferente</li>
+                            <li>Confira sua conexão com a internet</li>
+                            <li>A API pode estar inicializando - aguarde alguns segundos e tente novamente</li>
                         </ul>
                     </div>
                 </div>
@@ -397,7 +424,6 @@
         }
         
         function showToast(message, type = 'success') {
-            // Criar toast notification
             const toast = document.createElement('div');
             const colors = {
                 success: 'bg-green-500',
@@ -413,7 +439,10 @@
             }, 3000);
         }
         
-        // Permitir gerar redação com Ctrl+Enter
+        window.addEventListener('load', () => {
+            verificarConexao();
+        });
+        
         document.getElementById('temaInput').addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -421,8 +450,8 @@
             }
         });
         
-        // Dica de atalho
         console.log('💡 Dica: Use Ctrl+Enter para gerar redação rapidamente!');
+        console.log('🚀 Backend URL:', API_URL);
     </script>
 </body>
 </html>
