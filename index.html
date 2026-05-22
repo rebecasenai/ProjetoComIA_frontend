@@ -391,7 +391,7 @@
                 'educacao': '📖 Educação',
                 'cultura': '🎨 Cultura & Sociedade'
             };
-            return nomes[eixo] || '📌 Geral';
+            return nomes[eixo] || ' Geral';
         }
         
         function filtrarPorEixo(eixo) {
@@ -428,7 +428,7 @@
         function verApoio(id) {
             const tema = temasDatabase.find(t => t.id === id);
             if (tema) {
-                document.getElementById('modalTitulo').textContent = `📚 Material de Apoio: ${tema.titulo}`;
+                document.getElementById('modalTitulo').textContent = ` Material de Apoio: ${tema.titulo}`;
                 document.getElementById('modalConteudo').innerHTML = `
                     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-4">
                         <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-chart-line mr-2"></i>Dados e Estatísticas</h4>
