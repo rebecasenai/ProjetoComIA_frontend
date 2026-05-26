@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -92,7 +93,7 @@
                 <div class="flex-1">
                     <h2 class="text-xl font-semibold text-gray-800 mb-2">
                         <i class="fas fa-chalkboard-user text-gray-500 mr-2"></i>
-                        Painel do Educador
+                        GERAR TEMA PERSONALIZADO
                     </h2>
                     <p class="text-gray-500 text-sm mb-4">
                         Selecione um tema ou insira um assunto específico. O sistema fornecerá material de apoio, 
@@ -101,10 +102,6 @@
                     
                     <!-- Input de assunto livre -->
                     <div class="mt-4">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            <i class="fas fa-pen-alt text-gray-400 mr-1"></i>
-                            GERAR TEMA PERSONALIZADO
-                        </label>
                         <div class="flex gap-3 flex-wrap">
                             <input type="text" id="assuntoLivre" 
                                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
@@ -115,10 +112,6 @@
                                 Criar Tema
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">
-                            <i class="fas fa-lightbulb text-amber-500 mr-1"></i>
-                            A IA gerará um tema estruturado e uma redação completa com base no assunto informado.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -230,9 +223,17 @@
                     <i class="fas fa-file-alt text-blue-600"></i>
                     <span id="modalTitulo">Redação Modelo</span>
                 </h3>
-                <button onclick="fecharModal()" class="text-gray-400 hover:text-gray-600 transition">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="compartilharRedacao()" class="text-gray-600 hover:text-blue-600 transition p-1" title="Compartilhar">
+                        <i class="fas fa-share-alt text-lg"></i>
+                    </button>
+                    <button onclick="baixarPDF()" class="text-gray-600 hover:text-green-600 transition p-1" title="Baixar PDF">
+                        <i class="fas fa-download text-lg"></i>
+                    </button>
+                    <button onclick="fecharModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
             </div>
             <div id="modalConteudo" class="p-6 overflow-y-auto max-h-[calc(90vh-80px)] prose prose-sm max-w-none text-gray-700">
             </div>
@@ -634,6 +635,69 @@
                 document.getElementById('modalRedacao').classList.add('hidden');
                 document.getElementById('modalRedacao').classList.remove('flex');
             }
+        }
+
+        // Função para compartilhar a redação
+        function compartilharRedacao() {
+            const titulo = document.getElementById('modalTitulo').innerText.replace('Modelo Nota 1000: ', '').replace('Material de Apoio: ', '').replace('Redação Gerada: ', '');
+            const conteudo = document.getElementById('modalConteudo').innerText;
+            
+            // Copiar para clipboard
+            const texto = `${titulo}\n\n${conteudo}`;
+            navigator.clipboard.writeText(texto).then(() => {
+                // Feedback visual
+                const btn = event.target.closest('button');
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check text-green-600 text-lg"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                }, 2000);
+                alert('Redação copiada para a área de transferência!');
+            }).catch(() => {
+                alert('Erro ao copiar. Tente novamente.');
+            });
+        }
+
+        // Função para baixar como PDF
+        function baixarPDF() {
+            const titulo = document.getElementById('modalTitulo').innerText.replace('Modelo Nota 1000: ', '').replace('Material de Apoio: ', '').replace('Redação Gerada: ', '');
+            const conteudo = document.getElementById('modalConteudo').innerHTML;
+            
+            const element = document.createElement('div');
+            element.innerHTML = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;">
+                        <h1 style="margin: 0 0 10px 0; color: #1e293b; font-size: 24px;">ScribMeMind</h1>
+                        <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px;">Sistema Profissional de Correção de Redações</p>
+                        <h2 style="margin: 15px 0 0 0; color: #2563eb; font-size: 18px;">${titulo}</h2>
+                    </div>
+                    <div style="color: #334155; font-size: 14px;">
+                        ${conteudo}
+                    </div>
+                    <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
+                        <p>Gerado por ScribMeMind - ${new Date().toLocaleDateString('pt-BR')}</p>
+                    </div>
+                </div>
+            `;
+            
+            const opt = {
+                margin: 10,
+                filename: `redacao_${titulo.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            };
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                const btn = event.target.closest('button');
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check text-green-600 text-lg"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                }, 2000);
+            }).catch(() => {
+                alert('Erro ao gerar PDF. Tente novamente.');
+            });
         }
         
         // Salvar cópia original dos temas
