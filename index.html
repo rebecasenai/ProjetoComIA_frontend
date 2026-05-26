@@ -76,7 +76,7 @@
                 </div>
                 <div class="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-1.5 text-sm">
                     <i class="fas fa-check-circle text-green-400"></i>
-                    <span>IA Certificada ENEM</span>
+                    <span>IA - gemini</span>
                 </div>
             </div>
         </div>
@@ -240,11 +240,47 @@
         </div>
     </div>
 
-    <script>
-        // API URL
+    <!-- Seção de Envio para Correção -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-start gap-4 flex-wrap md:flex-nowrap">
+        <div class="bg-blue-50 rounded-xl p-3 text-blue-600">
+            <i class="fas fa-file-signature text-xl"></i>
+        </div>
+        <div class="flex-1 w-full">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                <i class="fas fa-spell-check text-blue-500 mr-2"></i>
+                CORRIGIR MINHA REDAÇÃO
+            </h2>
+            <p class="text-gray-500 text-sm mb-4">
+                Insira o tema escolhido e cole o seu texto completo. Nossa IA agirá como a banca corretora oficial do ENEM.
+            </p>
+            
+            <div class="space-y-3">
+                <input type="text" id="temaCorrecao" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
+                    placeholder="Digite o tema da sua redação aqui...">
+                
+                <textarea id="textoCorrecao" rows="8"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm font-mono"
+                    placeholder="Cole os parágrafos da sua redação aqui na íntegra..."></textarea>
+                
+                <div class="flex justify-end">
+                    <button onclick="enviarParaCorrecao()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-all text-sm font-semibold shadow-md flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                        Enviar para Correção Oficial
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+  <script>
+        // API URL - Certifique-se de que esta URL está correta e ativa
         const API_URL = 'https://projeto-com-ia-backend.vercel.app';
         
-        // Banco de dados de temas
+        // Banco de dados de temas locais
         let temasDatabase = [
             {
                 id: 1,
@@ -312,10 +348,16 @@
             }
         ];
         
-        let temasFiltrados = [...temasDatabase];
+        let themesDatabase = [...temasDatabase];
         let eixoAtual = 'todos';
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarTemas();
+            carregarTemasAPI();
+        });
         
-        // Carregar temas sugeridos da API (opcional)
+        // Carregar temas sugeridos da API
         async function carregarTemasAPI() {
             try {
                 const response = await fetch(`${API_URL}/temas-sugeridos`);
@@ -323,41 +365,155 @@
                     const data = await response.json();
                     if (data.status === 'success' && data.temas_sugeridos) {
                         data.temas_sugeridos.forEach((tema, index) => {
-                            temasDatabase.push({
-                                id: temasDatabase.length + 1,
-                                titulo: tema,
-                                eixo: ["meio-ambiente", "tecnologia", "saude", "educacao", "cultura"][index % 5],
-                                descricao: "Tema sugerido pela IA para prática de redação ENEM com potencial nota 1000.",
-                                apoio: "Este tema foi gerado com base nos principais assuntos recorrentes nas últimas edições do ENEM e atualidades.",
-                                modeloCompleto: `Dissertação completa sobre "${tema}" desenvolvida com repertório sociocultural atualizado e proposta de intervenção detalhada...`
-                            });
+                            // Evita duplicar se já existir
+                            if (!temasDatabase.some(t => t.titulo === tema)) {
+                                temasDatabase.push({
+                                    id: temasDatabase.length + 1,
+                                    titulo: tema,
+                                    eixo: ["meio-ambiente", "tecnologia", "saude", "educacao", "cultura"][index % 5],
+                                    descricao: "Tema sugerido via API para prática de redação ENEM com potencial nota 1000.",
+                                    apoio: "Este tema foi gerado dinamicamente baseado nos eixos mais cobrados do ENEM.",
+                                    modeloCompleto: null // Será gerado sob demanda se clicado
+                                });
+                            }
                         });
-                        temasFiltrados = [...temasDatabase];
-                        renderizarTemas();
+                        filtrarPorEixo(eixoAtual);
                     }
                 }
             } catch (error) {
-                console.log('Usando temas locais apenas');
+                console.error('Erro ao buscar temas da API, usando locais:', error);
             }
         }
-        
-        // Renderizar temas na tela
+
+        // Função Principal: Chamar a API para criar uma nova redação
+        async function gerarComAssuntoLivre() {
+            const inputAssunto = document.getElementById('assuntoLivre');
+            const tema = inputAssunto.value.trim();
+
+            if (!tema) {
+                alert('Por favor, digite um tema antes de gerar.');
+                return;
+            }
+
+            if (tema.length < 10) {
+                alert('O tema deve conter pelo menos 10 caracteres para uma geração precisa.');
+                return;
+            }
+
+            // Abrir modal com estado de carregamento
+            abrirModal("Gerando redação...", `
+                <div class="flex flex-col items-center justify-center py-12">
+                    <i class="fas fa-spinner fa-spin text-blue-600 text-5xl mb-4"></i>
+                    <p class="text-gray-600 font-medium">A Inteligência Artificial está estruturando sua redação Nota 1000...</p>
+                    <p class="text-gray-400 text-xs mt-2">Isso pode levar alguns segundos devido aos critérios rigorosos do ENEM.</p>
+                </div>
+            `);
+
+            try {
+                const response = await fetch(`${API_URL}/gerar-redacao`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tema: tema })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    const redacao = data.redacao;
+                    
+                    // Atualiza o título do modal
+                    document.getElementById('modalTitulo').innerText = `Redação Modelo: ${redacao.titulo || 'Nota 1000'}`;
+                    
+                    // Monta o HTML estruturado com base no seu REDACAO_SCHEMA
+                    let htmlConteudo = `
+                        <div class="space-y-6 animate-fade-in pb-8">
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-6">
+                                <h4 class="font-bold text-blue-800 text-sm uppercase tracking-wider mb-1">Tema Solicitado</h4>
+                                <p class="text-blue-900 font-semibold">${data.tema_solicitado}</p>
+                            </div>
+
+                            <div class="text-center my-6">
+                                <h2 class="text-xl font-bold text-gray-900 border-b pb-2 inline-block">${redacao.titulo}</h2>
+                            </div>
+
+                            <section>
+                                <h3 class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2"><i class="fas fa-bookmark mr-2"></i>Introdução</h3>
+                                <p class="text-gray-800 leading-relaxed text-justify bg-gray-50/50 p-3 rounded border border-gray-100">${redacao.introducao}</p>
+                            </section>
+
+                            <section>
+                                <h3 class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2"><i class="fas fa-layer-group mr-2"></i>Desenvolvimento</h3>
+                                <div class="space-y-4">
+                                    <p class="text-gray-800 leading-relaxed text-justify bg-gray-50/50 p-3 rounded border border-gray-100">${redacao.desenvolvimento.paragrafo_1}</p>
+                                    <p class="text-gray-800 leading-relaxed text-justify bg-gray-50/50 p-3 rounded border border-gray-100">${redacao.desenvolvimento.paragrafo_2}</p>
+                                    ${redacao.desenvolvimento.paragrafo_3 ? `<p class="text-gray-800 leading-relaxed text-justify bg-gray-50/50 p-3 rounded border border-gray-100">${redacao.desenvolvimento.paragrafo_3}</p>` : ''}
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2"><i class="fas fa-gavel mr-2"></i>Conclusão (Proposta de Intervenção)</h3>
+                                <p class="text-gray-800 leading-relaxed text-justify bg-gray-50/50 p-3 rounded border border-gray-100">${redacao.conclusao}</p>
+                            </section>
+
+                            <hr class="border-gray-200 my-6">
+
+                            <section class="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4"><i class="fas fa-graduation-cap mr-2"></i>Análise Detalhada das Competências ENEM</h3>
+                                <div class="space-y-3 text-xs">
+                                    <div class="p-3 bg-white rounded border border-slate-100"><strong>C1 (Escrita Formal):</strong> ${redacao.analise_criterios_enem.competencia_1}</div>
+                                    <div class="p-3 bg-white rounded border border-slate-100"><strong>C2 (Compreensão do Tema):</strong> ${redacao.analise_criterios_enem.competencia_2}</div>
+                                    <div class="p-3 bg-white rounded border border-slate-100"><strong>C3 (Argumentação):</strong> ${redacao.analise_criterios_enem.competencia_3}</div>
+                                    <div class="p-3 bg-white rounded border border-slate-100"><strong>C4 (Coesão/Coerência):</strong> ${redacao.analise_criterios_enem.competencia_4}</div>
+                                    <div class="p-3 bg-white rounded border border-slate-100"><strong>C5 (Intervenção):</strong> ${redacao.analise_criterios_enem.competencia_5}</div>
+                                </div>
+                            </section>
+
+                            ${redacao.referencias && redacao.referencias.length > 0 ? `
+                            <section>
+                                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2"><i class="fas fa-link mr-2"></i>Referências Utilizadas</h3>
+                                <ul class="list-disc list-inside text-xs text-gray-600 space-y-1">
+                                    ${redacao.referencias.map(ref => `<li>${ref}</li>`).join('')}
+                                </ul>
+                            </section>` : ''}
+                        </div>
+                    `;
+
+                    document.getElementById('modalConteudo').innerHTML = htmlConteudo;
+                    inputAssunto.value = ''; // Limpa o campo de texto
+                } else {
+                    throw new Error(data.message || 'Erro desconhecido na geração.');
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('modalConteudo').innerHTML = `
+                    <div class="text-center py-6 text-rose-600">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                        <p class="font-medium">Não foi possível gerar a redação.</p>
+                        <p class="text-gray-500 text-xs mt-1">${error.message}</p>
+                        <button onclick="fecharModal()" class="mt-4 px-4 py-2 bg-gray-800 text-white rounded-lg text-xs">Fechar e Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Funções Auxiliares de Interface (Filtros e Renderização)
         function renderizarTemas() {
             const container = document.getElementById('listaTemas');
-            document.getElementById('totalTemas').textContent = temasFiltrados.length;
+            document.getElementById('totalTemas').textContent = themesDatabase.length;
             
-            if (temasFiltrados.length === 0) {
+            if (themesDatabase.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-12">
                         <i class="fas fa-search text-gray-300 text-5xl mb-3"></i>
-                        <p class="text-gray-500 text-sm">Nenhum tema encontrado para este filtro.</p>
-                        <button onclick="resetarFiltros()" class="mt-3 text-blue-600 text-sm">Resetar filtros</button>
+                        <p class="text-gray-500 text-sm">Nenhum tema encontrado.</p>
                     </div>
                 `;
                 return;
             }
             
-            container.innerHTML = temasFiltrados.map(tema => `
+            container.innerHTML = themesDatabase.map(tema => `
                 <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all">
                     <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div class="flex-1">
@@ -366,346 +522,249 @@
                                     <i class="${getEixoIcon(tema.eixo)} mr-1"></i>
                                     ${getEixoNome(tema.eixo)}
                                 </span>
-                                <span class="text-xs text-gray-400">
-                                    <i class="far fa-file-alt"></i> Modelo ENEM
-                                </span>
+                                <span class="text-xs text-gray-400"><i class="far fa-file-alt"></i> Modelo ENEM</span>
                             </div>
                             <h3 class="text-md font-semibold text-gray-800 mb-1">${tema.titulo}</h3>
-                            <p class="text-gray-500 text-xs mb-3">${tema.descricao.substring(0, 100)}...</p>
+                            <p class="text-gray-500 text-xs mb-3">${tema.descricao}</p>
                             <div class="flex flex-wrap gap-3">
-                                <button onclick="verApoio(${tema.id})" 
-                                    class="text-gray-500 hover:text-gray-700 text-xs font-medium transition">
-                                    <i class="fas fa-info-circle mr-1"></i> Apoio
+                                <button onclick="verApoio(${tema.id})" class="text-blue-600 hover:text-blue-800 text-xs font-medium transition">
+                                    <i class="fas fa-info-circle mr-1"></i> Ver Texto de Apoio
                                 </button>
-                                <button onclick="estudarModelo(${tema.id})" 
-                                    class="text-gray-500 hover:text-gray-700 text-xs font-medium transition">
-                                    <i class="fas fa-book-open mr-1"></i> Modelo
-                                </button>
-                                <button onclick="gerarRedacaoComIA('${tema.titulo}')" 
-                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium transition">
-                                    <i class="fas fa-robot mr-1"></i> Gerar com IA
+                                <button onclick="gerarRedacaoDeTemaCard('${escapeHtml(tema.titulo)}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium transition">
+                                    <i class="fas fa-pen-nib mr-1"></i> Gerar Redação Completa
                                 </button>
                             </div>
-                        </div>
-                        <div class="self-end sm:self-auto">
-                            <button onclick="verApoio(${tema.id})" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-chevron-right text-sm"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
             `).join('');
         }
-        
-        function getEixoColor(eixo) {
-            const cores = {
-                'meio-ambiente': 'bg-green-50 text-green-700 border border-green-200',
-                'tecnologia': 'bg-blue-50 text-blue-700 border border-blue-200',
-                'saude': 'bg-rose-50 text-rose-700 border border-rose-200',
-                'educacao': 'bg-amber-50 text-amber-700 border border-amber-200',
-                'cultura': 'bg-purple-50 text-purple-700 border border-purple-200'
-            };
-            return cores[eixo] || 'bg-gray-100 text-gray-600 border border-gray-200';
+
+        function gerarRedacaoDeTemaCard(tituloTema) {
+            document.getElementById('assuntoLivre').value = tituloTema;
+            gerarComAssuntoLivre();
         }
-        
-        function getEixoIcon(eixo) {
-            const icons = {
-                'meio-ambiente': 'fas fa-leaf',
-                'tecnologia': 'fas fa-microchip',
-                'saude': 'fas fa-heartbeat',
-                'educacao': 'fas fa-book',
-                'cultura': 'fas fa-palette'
-            };
-            return icons[eixo] || 'fas fa-tag';
-        }
-        
-        function getEixoNome(eixo) {
-            const nomes = {
-                'meio-ambiente': 'Meio Ambiente',
-                'tecnologia': 'Tecnologia',
-                'saude': 'Saúde',
-                'educacao': 'Educação',
-                'cultura': 'Cultura'
-            };
-            return nomes[eixo] || 'Geral';
-        }
-        
+
         function filtrarPorEixo(eixo) {
             eixoAtual = eixo;
+            document.getElementById('filtroAtivo').textContent = `(${getEixoNome(eixo).toLowerCase()})`;
+            
             if (eixo === 'todos') {
-                temasFiltrados = [...temasDatabase];
+                themesDatabase = [...temasDatabase];
             } else {
-                temasFiltrados = temasDatabase.filter(t => t.eixo === eixo);
+                themesDatabase = temasDatabase.filter(t => t.eixo === eixo);
             }
             
+            // Estilização dos botões ativos
             document.querySelectorAll('.filtro-btn').forEach(btn => {
-                if (btn.dataset.eixo === eixo) {
-                    btn.classList.add('bg-gray-100', 'text-gray-900');
+                if (btn.getAttribute('data-eixo') === eixo) {
+                    btn.classList.add('bg-slate-100', 'font-semibold', 'text-slate-900');
                 } else {
-                    btn.classList.remove('bg-gray-100', 'text-gray-900');
+                    btn.classList.remove('bg-slate-100', 'font-semibold', 'text-slate-900');
                 }
             });
             
-            document.getElementById('filtroAtivo').innerHTML = `(${temasFiltrados.length} temas)`;
             renderizarTemas();
         }
-        
+
         function resetarFiltros() {
             filtrarPorEixo('todos');
         }
-        
+
         function carregarTemasPadrao() {
-            temasDatabase = [...temasDatabaseOriginal];
-            temasFiltrados = [...temasDatabase];
-            renderizarTemas();
+            // Remove itens adicionais dinâmicos se quiser resetar o catálogo padrão
+            temasDatabase = temasDatabase.slice(0, 8);
+            filtrarPorEixo('todos');
         }
-        
+
         function verApoio(id) {
             const tema = temasDatabase.find(t => t.id === id);
-            if (tema) {
-                document.getElementById('modalTitulo').innerHTML = `<i class="fas fa-chalkboard-user mr-2"></i> Material de Apoio: ${tema.titulo}`;
-                document.getElementById('modalConteudo').innerHTML = `
-                    <div class="bg-gray-50 border-l-4 border-blue-400 p-4 rounded mb-4">
-                        <h4 class="font-semibold text-gray-700 mb-2"><i class="fas fa-chart-line mr-2 text-blue-500"></i>Dados e Estatísticas</h4>
-                        <p class="text-gray-600 text-sm">${tema.apoio}</p>
-                    </div>
-                    <div class="bg-gray-50 border-l-4 border-green-400 p-4 rounded mb-4">
-                        <h4 class="font-semibold text-gray-700 mb-2"><i class="fas fa-lightbulb mr-2 text-amber-500"></i>Repertório Sugerido</h4>
-                        <p class="text-gray-600 text-sm">Autores como Paulo Freire, Milton Santos; dados do IBGE/INEP; referências a legislações específicas e exemplos de casos práticos recentes.</p>
-                    </div>
-                    <div class="bg-gray-50 border-l-4 border-purple-400 p-4 rounded">
-                        <h4 class="font-semibold text-gray-700 mb-2"><i class="fas fa-comments mr-2 text-purple-500"></i>Argumentos Fortes</h4>
-                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                            <li>Contextualização histórica do problema</li>
-                            <li>Análise de dados e estatísticas recentes</li>
-                            <li>Comparação com políticas internacionais bem-sucedidas</li>
-                            <li>Proposta de intervenção com agentes específicos</li>
-                        </ul>
-                    </div>
-                `;
-                abrirModal();
-            }
-        }
-        
-        function estudarModelo(id) {
-            const tema = temasDatabase.find(t => t.id === id);
-            if (tema) {
-                document.getElementById('modalTitulo').innerHTML = `<i class="fas fa-file-alt mr-2"></i> Modelo Nota 1000: ${tema.titulo}`;
-                document.getElementById('modalConteudo').innerHTML = `
-                    <div class="prose max-w-none">
-                        <div class="bg-amber-50 p-3 rounded mb-4 text-center border border-amber-200">
-                            <span class="font-semibold text-amber-800 text-sm"><i class="fas fa-trophy mr-1"></i> REDAÇÃO NOTA 1000 - ENEM</span>
-                        </div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-3">${tema.titulo}</h2>
-                        <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                            ${tema.modeloCompleto}
-                        </div>
-                        <div class="mt-6 pt-3 border-t border-gray-200">
-                            <h3 class="font-semibold text-gray-700 text-sm mb-2"><i class="fas fa-star text-amber-500 mr-1"></i> Competências Avaliadas:</h3>
-                            <ul class="grid grid-cols-2 gap-1 text-xs text-gray-500">
-                                <li><i class="fas fa-check-circle text-green-500 mr-1"></i> C1: Escrita formal - Excelente</li>
-                                <li><i class="fas fa-check-circle text-green-500 mr-1"></i> C2: Compreensão do tema - Adequado</li>
-                                <li><i class="fas fa-check-circle text-green-500 mr-1"></i> C3: Argumentação - Consistente</li>
-                                <li><i class="fas fa-check-circle text-green-500 mr-1"></i> C4: Coesão - Perfeita</li>
-                                <li><i class="fas fa-check-circle text-green-500 mr-1"></i> C5: Proposta de intervenção - Completa</li>
-                            </ul>
+            if(tema) {
+                abrirModal(`Texto de Apoio: ${tema.titulo}`, `
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-600 leading-relaxed bg-amber-50 p-4 rounded-lg border border-amber-200">${tema.apoio}</p>
+                        <div class="flex justify-end mt-4">
+                            <button onclick="gerarRedacaoDeTemaCard('${escapeHtml(tema.titulo)}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-pen-nib mr-2"></i> Gerar Redação deste Tema
+                            </button>
                         </div>
                     </div>
-                `;
-                abrirModal();
-            }
-        }
-        
-        async function gerarRedacaoComIA(tituloTema) {
-            document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Gerando redação com IA...';
-            document.getElementById('modalConteudo').innerHTML = `
-                <div class="text-center py-12">
-                    <i class="fas fa-spinner fa-spin text-blue-500 text-4xl mb-3"></i>
-                    <p class="text-gray-500">Processando solicitação...</p>
-                </div>
-            `;
-            abrirModal();
-            
-            try {
-                const response = await fetch(`${API_URL}/gerar-redacao`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tema: tituloTema })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        const redacao = data.redacao;
-                        document.getElementById('modalTitulo').innerHTML = `<i class="fas fa-robot mr-2"></i> Redação Gerada: ${redacao.titulo}`;
-                        document.getElementById('modalConteudo').innerHTML = `
-                            <div class="prose max-w-none">
-                                <div class="bg-blue-50 p-3 rounded mb-4 text-center border border-blue-200">
-                                    <span class="font-semibold text-blue-800 text-sm"><i class="fas fa-magic mr-1"></i> REDAÇÃO GERADA POR IA - NOTA 1000</span>
-                                </div>
-                                <h2 class="text-xl font-bold text-gray-800 mb-3">${redacao.titulo}</h2>
-                                <h3 class="font-semibold text-gray-700 mt-4 mb-1"><i class="fas fa-book-open mr-1"></i> Introdução</h3>
-                                <p class="text-gray-600 text-sm leading-relaxed mb-3">${redacao.introducao}</p>
-                                <h3 class="font-semibold text-gray-700 mt-4 mb-1"><i class="fas fa-pen-fancy mr-1"></i> Desenvolvimento</h3>
-                                <p class="text-gray-600 text-sm leading-relaxed mb-2"><strong>Argumento 1:</strong> ${redacao.desenvolvimento?.paragrafo_1}</p>
-                                <p class="text-gray-600 text-sm leading-relaxed mb-2"><strong>Argumento 2:</strong> ${redacao.desenvolvimento?.paragrafo_2}</p>
-                                ${redacao.desenvolvimento?.paragrafo_3 ? `<p class="text-gray-600 text-sm leading-relaxed mb-2"><strong>Argumento 3:</strong> ${redacao.desenvolvimento.paragrafo_3}</p>` : ''}
-                                <h3 class="font-semibold text-gray-700 mt-4 mb-1"><i class="fas fa-flag-checkered mr-1"></i> Conclusão</h3>
-                                <p class="text-gray-600 text-sm leading-relaxed mb-3">${redacao.conclusao}</p>
-                                <div class="bg-gray-50 rounded p-3 mt-4 text-xs text-gray-500">
-                                    <strong class="block mb-1"><i class="fas fa-book mr-1"></i> Referências:</strong>
-                                    <ul class="list-disc list-inside">
-                                        ${redacao.referencias?.map(ref => `<li>${ref}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        throw new Error(data.message);
-                    }
-                } else {
-                    throw new Error('Falha na comunicação com a IA');
-                }
-            } catch (error) {
-                document.getElementById('modalConteudo').innerHTML = `
-                    <div class="text-center py-8 text-red-600">
-                        <i class="fas fa-exclamation-triangle text-4xl mb-3"></i>
-                        <p class="text-sm">Erro: ${error.message}</p>
-                        <button onclick="fecharModal()" class="mt-4 bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm">Fechar</button>
-                    </div>
-                `;
-            }
-        }
-        
-        async function gerarComAssuntoLivre() {
-            const assunto = document.getElementById('assuntoLivre').value.trim();
-            if (!assunto) {
-                alert('Por favor, insira um assunto.');
-                return;
-            }
-            
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Gerando...';
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch(`${API_URL}/gerar-redacao`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tema: assunto })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        const novoTema = {
-                            id: temasDatabase.length + 1,
-                            titulo: data.redacao.titulo,
-                            eixo: 'tecnologia',
-                            descricao: `Tema gerado por IA baseado em: "${assunto}". Modelo completo disponível.`,
-                            apoio: `Assunto original: ${assunto}. Redação gerada com repertório atualizado.`,
-                            modeloCompleto: data.redacao.introducao + " " + data.redacao.desenvolvimento.paragrafo_1 + " " + data.redacao.desenvolvimento.paragrafo_2 + " " + data.redacao.conclusao
-                        };
-                        temasDatabase.push(novoTema);
-                        filtrarPorEixo(eixoAtual);
-                        alert(`Tema "${data.redacao.titulo}" adicionado ao catálogo.`);
-                        document.getElementById('assuntoLivre').value = '';
-                    } else {
-                        throw new Error(data.message);
-                    }
-                } else {
-                    throw new Error('Erro na requisição');
-                }
-            } catch (error) {
-                alert('Erro ao gerar tema: ' + error.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-        
-        function abrirModal() {
-            document.getElementById('modalRedacao').classList.remove('hidden');
-            document.getElementById('modalRedacao').classList.add('flex');
-        }
-        
-        function fecharModal(event) {
-            if (!event || event.target === document.getElementById('modalRedacao') || event.target.tagName === 'BUTTON') {
-                document.getElementById('modalRedacao').classList.add('hidden');
-                document.getElementById('modalRedacao').classList.remove('flex');
+                `);
             }
         }
 
-        // Função para compartilhar a redação
-        function compartilharRedacao() {
-            const titulo = document.getElementById('modalTitulo').innerText.replace('Modelo Nota 1000: ', '').replace('Material de Apoio: ', '').replace('Redação Gerada: ', '');
-            const conteudo = document.getElementById('modalConteudo').innerText;
-            
-            // Copiar para clipboard
-            const texto = `${titulo}\n\n${conteudo}`;
-            navigator.clipboard.writeText(texto).then(() => {
-                // Feedback visual
-                const btn = event.target.closest('button');
-                const originalIcon = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check text-green-600 text-lg"></i>';
-                setTimeout(() => {
-                    btn.innerHTML = originalIcon;
-                }, 2000);
-                alert('Redação copiada para a área de transferência!');
-            }).catch(() => {
-                alert('Erro ao copiar. Tente novamente.');
+        // Funções Utilitárias do Modal
+        function abrirModal(titulo, conteudo) {
+            document.getElementById('modalTitulo').innerText = titulo;
+            document.getElementById('modalConteudo').innerHTML = conteudo;
+            const modal = document.getElementById('modalRedacao');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function fecharModal(event) {
+            const modal = document.getElementById('modalRedacao');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Helpers de Estilização Dinâmica
+        function getEixoColor(eixo) {
+            const cores = {
+                'meio-ambiente': 'bg-green-100 text-green-800',
+                'saude': 'bg-rose-100 text-rose-800',
+                'tecnologia': 'bg-blue-100 text-blue-800',
+                'educacao': 'bg-amber-100 text-amber-800',
+                'cultura': 'bg-purple-100 text-purple-800'
+            };
+            return cores[eixo] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getEixoIcon(eixo) {
+            const icones = {
+                'meio-ambiente': 'fas fa-leaf',
+                'saude': 'fas fa-heartbeat',
+                'tecnologia': 'fas fa-microchip',
+                'educacao': 'fas fa-book',
+                'cultura': 'fas fa-palette'
+            };
+            return icones[eixo] || 'fas fa-globe';
+        }
+
+        function getEixoNome(eixo) {
+            const nomes = {
+                'todos': 'Todos os temas',
+                'meio-ambiente': 'Meio Ambiente',
+                'saude': 'Saúde Pública',
+                'tecnologia': 'Tecnologia & Ética',
+                'educacao': 'Educação',
+                'cultura': 'Cultura & Sociedade'
+            };
+            return nomes[eixo] || eixo;
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s];
             });
         }
 
-        // Função para baixar como PDF
+        // Funções para os botões extras do Modal
         function baixarPDF() {
-            const titulo = document.getElementById('modalTitulo').innerText.replace('Modelo Nota 1000: ', '').replace('Material de Apoio: ', '').replace('Redação Gerada: ', '');
-            const conteudo = document.getElementById('modalConteudo').innerHTML;
-            
-            const element = document.createElement('div');
-            element.innerHTML = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
-                    <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;">
-                        <h1 style="margin: 0 0 10px 0; color: #1e293b; font-size: 24px;">ScribMeMind</h1>
-                        <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px;">Sistema Profissional de Correção de Redações</p>
-                        <h2 style="margin: 15px 0 0 0; color: #2563eb; font-size: 18px;">${titulo}</h2>
-                    </div>
-                    <div style="color: #334155; font-size: 14px;">
-                        ${conteudo}
-                    </div>
-                    <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-                        <p>Gerado por ScribMeMind - ${new Date().toLocaleDateString('pt-BR')}</p>
-                    </div>
-                </div>
-            `;
-            
+            const elemento = document.getElementById('modalConteudo');
+            const titulo = document.getElementById('modalTitulo').innerText;
             const opt = {
-                margin: 10,
-                filename: `redacao_${titulo.replace(/\s+/g, '_')}.pdf`,
+                margin: 1,
+                filename: `${titulo}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
-                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
-            
-            html2pdf().set(opt).from(element).save().then(() => {
-                const btn = event.target.closest('button');
-                const originalIcon = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check text-green-600 text-lg"></i>';
-                setTimeout(() => {
-                    btn.innerHTML = originalIcon;
-                }, 2000);
-            }).catch(() => {
-                alert('Erro ao gerar PDF. Tente novamente.');
-            });
+            html2pdf().set(opt).from(elemento).save();
         }
-        
-        // Salvar cópia original dos temas
-        const temasDatabaseOriginal = [...temasDatabase];
-        
-        // Inicializar
-        renderizarTemas();
-        carregarTemasAPI();
+
+        function compartilharRedacao() {
+            if (navigator.share) {
+                navigator.share({
+                    title: document.getElementById('modalTitulo').innerText,
+                    text: 'Olha essa redação Nota 1000 que acabei de gerar no ScribMeMind!',
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                alert('Compartilhamento não suportado neste navegador. Copie o texto manualmente.');
+            }
+        }
+
+        async function enviarParaCorrecao() {
+    const tema = document.getElementById('temaCorrecao').value.trim();
+    const texto = document.getElementById('textoCorrecao').value.trim();
+
+    if (!tema || !texto) {
+        alert('Por favor, preencha o tema e cole sua redação antes de enviar.');
+        return;
+    }
+
+    if (texto.length < 100) {
+        alert('O texto fornecido está muito curto para ser uma redação do ENEM.');
+        return;
+    }
+
+    // Exibe tela de carregamento usando o modal existente
+    abrirModal("Corrigindo redação...", `
+        <div class="flex flex-col items-center justify-center py-12">
+            <i class="fas fa-gavel fa-spin text-amber-500 text-5xl mb-4"></i>
+            <p class="text-gray-600 font-medium">Banca Avaliadora analisando desvios e critérios...</p>
+            <p class="text-gray-400 text-xs mt-2">Estamos calculando os desvios gramaticais e a estrutura das competências.</p>
+        </div>
+    `);
+
+    try {
+        const response = await fetch(`${API_URL}/corrigir-redacao`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ tema: tema, texto: texto })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            const corr = data.correcao;
+            
+            document.getElementById('modalTitulo').innerText = `Resultado da Correção Oficial`;
+            
+            let htmlResultado = `
+                <div class="space-y-6 animate-fade-in pb-8">
+                    <!-- Bloco de Nota Grandioso -->
+                    <div class="bg-slate-900 text-white p-6 rounded-xl text-center shadow-lg">
+                        <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Nota Final Alcançada</p>
+                        <h2 class="text-5xl font-black text-emerald-400 my-2">${corr.nota_total} <span class="text-lg text-white font-normal">/ 1000</span></h2>
+                        <p class="text-xs text-slate-300 max-w-md mx-auto mt-2">${corr.comentario_geral}</p>
+                    </div>
+
+                    <h3 class="text-md font-bold text-gray-800 border-b pb-2"><i class="fas fa-chart-bar mr-2"></i>Desempenho por Competência</h3>
+                    
+                    <!-- Competências Individuais -->
+                    <div class="space-y-4">
+                        ${[1,2,3,4,5].map(num => {
+                            const comp = corr[`competencia_${num}`];
+                            return `
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="font-bold text-sm text-gray-800">Competência ${num}</h4>
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold ${comp.nota >= 160 ? 'bg-emerald-100 text-emerald-800' : comp.nota >= 120 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}">
+                                            ${comp.nota} Pontos
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 text-xs text-justify leading-relaxed">${comp.justificativa}</p>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalConteudo').innerHTML = htmlResultado;
+            
+            // Limpa o formulário de envio
+            document.getElementById('temaCorrecao').value = '';
+            document.getElementById('textoCorrecao').value = '';
+        } else {
+            throw new Error(data.message || 'Falha na comunicação com o avaliador.');
+        }
+    } catch (error) {
+        console.error(error);
+        document.getElementById('modalConteudo').innerHTML = `
+            <div class="text-center py-6 text-rose-600">
+                <i class="fas fa-times-circle text-4xl mb-2"></i>
+                <p class="font-medium">Ocorreu um erro no processo de correção.</p>
+                <p class="text-gray-500 text-xs mt-1">${error.message}</p>
+            </div>
+        `;
+    }
+}
     </script>
+
 </body>
 </html>
